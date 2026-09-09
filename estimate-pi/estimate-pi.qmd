@@ -1,0 +1,89 @@
+---
+title: "Estimating $\\pi$ by throwing darts"
+subtitle: "A five-minute warm-up before the applet"
+format:
+  pdf:
+    documentclass: article
+    papersize: letter
+    geometry:
+      - margin=0.8in
+    fontsize: 11pt
+    number-sections: false
+    colorlinks: true
+---
+
+## The setup
+
+You have a square dartboard with sides of length 1. Inside it, drawn with one corner as the centre, is a quarter of a circle with radius 1. The picture shows 60 random throws.
+
+```{r}
+#| echo: false
+#| fig-width: 2.2
+#| fig-height: 2.2
+#| fig-align: center
+set.seed(2026)
+n <- 60
+x <- runif(n); y <- runif(n)
+inside <- x^2 + y^2 <= 1
+par(mar = c(2.6, 2.6, 0.4, 0.4), pty = "s", mgp = c(1.5, 0.4, 0), tcl = -0.25)
+plot(NA, xlim = c(0, 1), ylim = c(0, 1), xlab = "x", ylab = "y", asp = 1,
+     xaxs = "i", yaxs = "i", cex.axis = 0.85, cex.lab = 0.9)
+t <- seq(0, pi / 2, length.out = 200)
+polygon(c(0, cos(t)), c(0, sin(t)), col = "#dfe8f5", border = NA)
+lines(cos(t), sin(t), lwd = 2, col = "grey30")
+points(x, y, pch = 19, cex = 0.8, col = ifelse(inside, "#1f77b4", "#ff7f0e"))
+box(lwd = 1.5)
+```
+
+Every throw lands somewhere in the square, completely at random: no spot is more likely than any other. Some throws land inside the quarter circle (blue), some land outside it (orange).
+
+Two formulas you already know:
+
+| Shape | Area |
+|:--|:--|
+| Square with side $s$ | $A = s^2$ |
+| Circle with radius $r$ | $A = \pi r^2$ |
+
+## What we're trying to do
+
+Nobody has told you the value of $\pi$. All you can do is throw darts and count.
+
+**Your task.** Explain how you could use a large number of random throws to *estimate* $\pi$, using only the two area formulas above and the counts of blue and orange dots. Work in pairs for about five minutes and write down:
+
+1. The chance that a single random throw lands inside the quarter circle.
+2. A formula that turns "number of throws" and "number inside" into an estimate of $\pi$.
+3. A guess: if you throw 100 darts, roughly how close to $\pi$ do you expect your estimate to be? What about 10,000 darts?
+
+Then open the applet at <https://driegert.github.io/demos/estimate-pi/> and see how your reasoning plays out.
+
+{{< pagebreak >}}
+
+## Hints
+
+**Hint 1: compare areas.** For a random throw, the chance of landing in a region is
+
+$$
+P(\text{lands in region}) = \frac{\text{area of the region}}{\text{area of the whole square}}.
+$$
+
+The square has side 1. The quarter circle has radius 1, and it is one quarter of a full circle.
+
+**Hint 2: turn the chance into a count.** If you throw $n$ darts and each has the same chance $p$ of landing inside, then the proportion that land inside,
+
+$$
+\hat p = \frac{\text{number inside}}{n},
+$$
+
+should be close to $p$ when $n$ is large. Rearrange the expression for $p$ from Hint 1 so that $\pi$ is by itself on one side, then swap $p$ for $\hat p$.
+
+**Hint 3: how close is close?** Each throw is a yes/no trial with success probability $p$. You may already know a formula for the standard deviation of a sample proportion. Notice how it depends on $n$: to cut the typical error by a factor of 10, how many times more darts do you need?
+
+{{< pagebreak >}}
+
+## Answers (for the instructor)
+
+1. $P(\text{inside}) = \dfrac{\tfrac14 \pi (1)^2}{1^2} = \dfrac{\pi}{4} \approx 0.785$.
+
+2. $\hat\pi = 4 \times \dfrac{\text{number inside}}{n}$.
+
+3. $\mathrm{SE}(\hat\pi) = 4\sqrt{\dfrac{p(1-p)}{n}} \approx \dfrac{1.64}{\sqrt n}$, so about $\pm 0.16$ at $n = 100$ and about $\pm 0.016$ at $n = 10{,}000$. One more decimal place costs 100 times more darts. The applet shows this as a shrinking funnel on the convergence plot; switch on "Zoom in on $\pi$" to keep it visible.

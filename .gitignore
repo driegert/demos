@@ -1,3 +1,8 @@
 .DS_Store
 *~
 .claude/
+/.quarto/
+*_files/
+*.knit.md
+*.tex
+*.log
