@@ -35,11 +35,11 @@ The game always runs the same way:
 
 1. You pick a door. It stays closed.
 2. The host, who knows exactly where the car is, opens one of the *other* two doors and shows you a goat. He never opens your door and never opens the car.
-3. The host asks: do you want to **stay** with your door, or **switch** to the other closed door?
+3. The host asks: do you want to **keep** your door, or **switch** to the other closed door?
 
 ## What we're trying to do
 
-Two doors are left closed. Is it better to stay, better to switch, or does it not matter?
+Two doors are left closed. Is it better to keep your door, better to switch, or does it not matter?
 
 **Before you play,** write down your gut answer and one sentence of reasoning. Nobody will mark it; it is something to compare against later.
 
@@ -52,14 +52,14 @@ Think about:
 1. When you first pick a door, what is the chance it hides the car?
 2. The host then opens a goat door. Did that move the car? Did it change the chance that *your* door hides the car?
 3. Whatever chance is left over has to sit somewhere. Where?
-4. A prediction: if you play 30 rounds, roughly how many times should *stay* win, and how many times should *switch* win?
+4. A prediction: if you play 30 rounds, roughly how many times should *keep* win, and how many times should *switch* win?
 
-Then open the applet at <https://driegert.github.io/demos/monte_hall/> and play at least ten rounds. Every round it shows staying and switching side by side. Record the totals, compare them with your prediction, and if they surprise you, try the hints overleaf.
+Then open the applet at <https://driegert.github.io/demos/monte_hall/> and play at least ten rounds. Every round it shows keeping and switching side by side. Record the totals, compare them with your prediction, and if they surprise you, try the hints overleaf.
 
 \begin{center}
 \begin{tabular}{|l|c|c|}
 \hline
- & \textbf{Stay wins} & \textbf{Switch wins} \\ \hline
+ & \textbf{Keep wins} & \textbf{Switch wins} \\ \hline
 \rule[-0.25cm]{0pt}{0.7cm}After 10 rounds & \hspace{2.2cm} & \hspace{2.2cm} \\ \hline
 \rule[-0.25cm]{0pt}{0.7cm}After 100 automatic rounds & & \\ \hline
 \end{tabular}
@@ -76,14 +76,14 @@ Then open the applet at <https://driegert.github.io/demos/monte_hall/> and play 
 - Your first pick was a goat. The host has *no choice*: the other goat is the only door he is allowed to open. So what must be behind the door he leaves closed?
 - Your first pick was the car. The host can open either goat door. What is behind the door he leaves closed this time?
 
-In each kind of round, work out whether staying or switching wins. Then ask how often each kind of round happens.
+In each kind of round, work out whether keeping or switching wins. Then ask how often each kind of round happens.
 
 **Hint 3: list every case.** Because the doors are identical, it is enough to imagine you always pick door 1. Fill in the table.
 
 \begin{center}
 \begin{tabular}{|c|c|c|c|}
 \hline
-\textbf{Car is behind} & \textbf{Host opens} & \textbf{Stay wins?} & \textbf{Switch wins?} \\ \hline
+\textbf{Car is behind} & \textbf{Host opens} & \textbf{Keep wins?} & \textbf{Switch wins?} \\ \hline
 \rule[-0.25cm]{0pt}{0.7cm}Door 1 & & & \\ \hline
 \rule[-0.25cm]{0pt}{0.7cm}Door 2 & & & \\ \hline
 \rule[-0.25cm]{0pt}{0.7cm}Door 3 & & & \\ \hline
