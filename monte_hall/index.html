@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Monty Hall problem</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f7fb;
+      --surface: #ffffff;
+      --text: #172033;
+      --muted: #596579;
+      --border: #cbd4e1;
+      --grid: #dfe5ee;
+      --accent: #315caa;
+      --accent-hover: #234988;
+      --win: #1e7d34;
+      --win-bg: #1e7d34;
+      --lose: #b3261e;
+      --lose-bg: #b3261e;
+      --panel: #315caa;
+      --shadow: 0 12px 32px rgba(30, 50, 80, 0.09);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #101722;
+        --surface: #182231;
+        --text: #edf2f8;
+        --muted: #afbac9;
+        --border: #405066;
+        --grid: #2b394b;
+        --accent: #86aaf2;
+        --accent-hover: #a7c1f7;
+        --win: #6fcf8a;
+        --win-bg: #1e7d34;
+        --lose: #ff9d95;
+        --lose-bg: #7a231d;
+        --panel: #4a6fb8;
+        --shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+      }
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { width: min(1120px, calc(100% - 32px)); margin: 0 auto; padding: 38px 0 56px; }
+    h1 { margin: 0; font-size: clamp(2rem, 6vw, 3.4rem); line-height: 1.08; letter-spacing: -0.035em; }
+    h2 { margin: 0 0 14px; font-size: 1.35rem; }
+    h3 { margin: 0 0 10px; font-size: 1.05rem; text-align: center; }
+    p { margin: 0 0 12px; }
+    .lede { max-width: 750px; margin: 12px 0 28px; color: var(--muted); font-size: 1.08rem; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 22px;
+      margin-bottom: 22px;
+    }
+    button {
+      min-height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--text);
+      font: inherit;
+      padding: 8px 14px;
+      cursor: pointer;
+      font-weight: 650;
+    }
+    button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    button:disabled { cursor: not-allowed; opacity: 0.45; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); min-width: 78px; }
+    button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--surface); }
+    .button-row { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
+
+    .status {
+      font-size: 1.12rem;
+      font-weight: 650;
+      min-height: 1.6em;
+      margin: 0 0 20px;
+      padding: 10px 14px;
+      border-left: 4px solid var(--accent);
+      background: var(--bg);
+      border-radius: 8px;
+    }
+
+    .doors-row { display: flex; gap: 18px; justify-content: center; flex-wrap: wrap; }
+    .door {
+      position: relative;
+      width: 108px;
+      height: 148px;
+      padding: 0;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg);
+      overflow: hidden;
+      min-height: unset;
+    }
+    .door:hover:not(:disabled) { border-color: var(--accent); }
+    .door-panel {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--panel);
+      color: #fff;
+      transition: transform 0.35s ease, opacity 0.3s ease;
+      transform-origin: top;
+    }
+    .door-number { font-size: 1.9rem; font-weight: 800; }
+    .door-knob {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.85);
+    }
+    .door-reveal {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.6rem;
+      background: var(--surface);
+    }
+    .door.open .door-panel { transform: translateY(-100%); opacity: 0; }
+    .pick-badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      z-index: 2;
+      background: var(--accent);
+      color: var(--surface);
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      letter-spacing: 0.02em;
+    }
+    .door.picked { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .result-badge {
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      padding: 3px 9px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 0.78rem;
+      color: #fff;
+      white-space: nowrap;
+    }
+    .result-badge.win { background: var(--win-bg); }
+    .result-badge.lose { background: var(--lose-bg); }
+
+    .split-row { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+    .column { flex: 1; min-width: 250px; max-width: 400px; }
+    .column .doors-row { margin-top: 8px; }
+
+    .action-row { display: flex; justify-content: center; margin-top: 22px; }
+
+    table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+    th:first-child, td:first-child { text-align: left; }
+    thead th { color: var(--muted); font-weight: 650; font-size: 0.85rem; border-bottom: 2px solid var(--border); }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .rounds-line { color: var(--muted); margin: 4px 0 14px; }
+    .history-strip { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; min-height: 22px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .chip.S { background: var(--accent); }
+    .chip.W { background: var(--win-bg); }
+
+    ul.notice { margin: 0; padding-left: 22px; }
+    ul.notice li { margin-bottom: 8px; }
+
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .door-panel { transition: none; }
+    }
+    @media (max-width: 640px) {
+      .split-row { flex-direction: column; align-items: center; }
+      .column { max-width: 100%; width: 100%; }
+    }
+    @media (max-width: 800px) {
+      main { width: min(100% - 20px, 620px); padding-top: 25px; }
+      .card { padding: 17px; }
+      .door { width: 92px; height: 128px; }
+      .door-number { font-size: 1.5rem; }
+      .door-reveal { font-size: 2.1rem; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>The Monty Hall problem</h1>
+      <p class="lede">Behind three doors are one car and two goats. You pick a door, then the host — who knows exactly where the car is — opens a different door and shows you a goat. Two doors remain closed: yours, and one other. Should you stay with your pick, or switch?</p>
+    </header>
+
+    <section class="card" aria-label="Monty Hall game">
+      <p id="status" class="status" aria-live="polite">Round 1 — pick a door.</p>
+
+      <div class="doors-row" id="singleDoors"></div>
+
+      <div class="split-row" id="splitRow" hidden>
+        <div class="column">
+          <h3>Stay</h3>
+          <div class="doors-row" id="stayDoors"></div>
+        </div>
+        <div class="column">
+          <h3>Switch</h3>
+          <div class="doors-row" id="switchDoors"></div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button id="actionButton" class="primary" hidden>Reveal the car</button>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Results tally">
+      <h2>Results</h2>
+      <table>
+        <thead>
+          <tr><th>Strategy</th><th>Wins</th><th>Rounds</th><th>Win rate</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Stay</td><td id="stayWins">0</td><td id="stayRounds">0</td><td id="stayRate">—</td></tr>
+          <tr><td>Switch</td><td id="switchWins">0</td><td id="switchRounds">0</td><td id="switchRate">—</td></tr>
+        </tbody>
+      </table>
+      <p class="rounds-line" id="roundsLine">Rounds played: 0 of 10</p>
+      <div class="history-strip" id="historyStrip" aria-hidden="true"></div>
+      <div class="button-row">
+        <button id="resetButton">Reset</button>
+        <button id="autoButton">Play 100 rounds automatically</button>
+      </div>
+    </section>
+
+    <section class="card" aria-label="What to notice">
+      <h2>What to notice</h2>
+      <ul class="notice">
+        <li><strong>Stay</strong> wins exactly when your first pick was the car — probability 1/3.</li>
+        <li><strong>Switch</strong> wins exactly when your first pick was a goat — probability 2/3.</li>
+        <li>The two win counts always add up to the number of rounds played, because the host never opens the car.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    // ---- Pure game-logic functions (exposed on window.MontyHall for testing) ----
+
+    function newRound(rng) {
+      rng = rng || Math.random;
+      return { car: Math.floor(rng() * 3), pick: null, opened: null };
+    }
+
+    function hostOpens(car, pick, rng) {
+      rng = rng || Math.random;
+      const options = [0, 1, 2].filter(d => d !== car && d !== pick);
+      if (options.length === 1) return options[0];
+      return options[Math.floor(rng() * options.length)];
+    }
+
+    function switchTarget(pick, opened) {
+      return [0, 1, 2].find(d => d !== pick && d !== opened);
+    }
+
+    function outcome(car, pick, opened) {
+      const stayWins = pick === car;
+      const switchWins = switchTarget(pick, opened) === car;
+      return { stayWins, switchWins };
+    }
+
+    // ---- DOM-facing game controller ----
+    (() => {
+      "use strict";
+
+      const statusEl = document.getElementById("status");
+      const singleDoorsEl = document.getElementById("singleDoors");
+      const splitRowEl = document.getElementById("splitRow");
+      const stayDoorsEl = document.getElementById("stayDoors");
+      const switchDoorsEl = document.getElementById("switchDoors");
+      const actionButton = document.getElementById("actionButton");
+      const resetButton = document.getElementById("resetButton");
+      const autoButton = document.getElementById("autoButton");
+      const historyStrip = document.getElementById("historyStrip");
+      const roundsLine = document.getElementById("roundsLine");
+      const cells = {
+        stayWins: document.getElementById("stayWins"),
+        stayRounds: document.getElementById("stayRounds"),
+        stayRate: document.getElementById("stayRate"),
+        switchWins: document.getElementById("switchWins"),
+        switchRounds: document.getElementById("switchRounds"),
+        switchRate: document.getElementById("switchRate"),
+      };
+
+      const game = {
+        phase: "PICK", // PICK | HOST_OPENED | SPLIT | REVEALED
+        car: null,
+        pick: null,
+        opened: null,
+        tally: { stay: 0, switch: 0, rounds: 0 },
+        history: [],
+      };
+      let timerA = null, timerB = null;
+
+      function clearTimers() {
+        if (timerA) clearTimeout(timerA);
+        if (timerB) clearTimeout(timerB);
+        timerA = timerB = null;
+      }
+
+      function doorContent(idx) {
+        return idx === game.car ? "\u{1F697}" : "\u{1F410}";
+      }
+
+      function createDoor(idx, onPick) {
+        const btn = document.createElement("button");
+        btn.className = "door";
+        btn.dataset.idx = String(idx);
+        btn.innerHTML =
+          '<span class="door-reveal" aria-hidden="true"></span>' +
+          '<span class="door-panel"><span class="door-number">' + (idx + 1) + '</span><span class="door-knob"></span></span>' +
+          '<span class="pick-badge" hidden>Your pick</span>' +
+          '<span class="result-badge" hidden></span>';
+        if (onPick) btn.addEventListener("click", () => onPick(idx));
+        return btn;
+      }
+
+      function buildDoorSet(container, onPick) {
+        const doors = [];
+        for (let i = 0; i < 3; i++) {
+          const d = createDoor(i, onPick);
+          container.appendChild(d);
+          doors.push(d);
+        }
+        return doors;
+      }
+
+      const singleDoors = buildDoorSet(singleDoorsEl, idx => pickDoor(idx));
+      const stayDoors = buildDoorSet(stayDoorsEl, null);
+      const switchDoors = buildDoorSet(switchDoorsEl, null);
+
+      function setDoorState(btn, idx, isOpen, isPick, resultLabel) {
+        btn.classList.toggle("open", isOpen);
+        btn.classList.toggle("picked", isPick);
+        const reveal = btn.querySelector(".door-reveal");
+        const badge = btn.querySelector(".pick-badge");
+        const result = btn.querySelector(".result-badge");
+        const content = isOpen ? doorContent(idx) : "";
+        reveal.textContent = content;
+        badge.hidden = !isPick;
+        let label = "Door " + (idx + 1) + ", " + (isOpen ? "open" : "closed");
+        if (isOpen) label += content === "\u{1F697}" ? ", car" : ", goat";
+        if (isPick) label += ", your pick";
+        if (resultLabel) {
+          label += ", " + (resultLabel === "win" ? "win" : "lose");
+          result.hidden = false;
+          result.textContent = resultLabel === "win" ? "Win \u{1F697}" : "Lose \u{1F410}";
+          result.className = "result-badge " + resultLabel;
+        } else {
+          result.hidden = true;
+        }
+        btn.setAttribute("aria-label", label);
+      }
+
+      function currentRound() {
+        return game.tally.rounds + 1;
+      }
+
+      function statusText() {
+        switch (game.phase) {
+          case "PICK":
+            return "Round " + currentRound() + " — pick a door.";
+          case "HOST_OPENED":
+            return "The host opens door " + (game.opened + 1) + " and shows a goat.";
+          case "SPLIT":
+            return "Reveal the car to see which strategy won.";
+          case "REVEALED": {
+            const { stayWins } = outcome(game.car, game.pick, game.opened);
+            const label = stayWins ? "Staying" : "Switching";
+            return label + " won this round. Start round " + (currentRound() + 1) + ".";
+          }
+          default:
+            return "";
+        }
+      }
+
+      function render() {
+        const phase = game.phase;
+        statusEl.textContent = statusText();
+
+        const showSplit = phase === "SPLIT" || phase === "REVEALED";
+        singleDoorsEl.hidden = showSplit;
+        splitRowEl.hidden = !showSplit;
+
+        singleDoors.forEach((btn, idx) => {
+          const isOpen = phase !== "PICK" && idx === game.opened;
+          setDoorState(btn, idx, isOpen, idx === game.pick, null);
+          btn.disabled = phase !== "PICK";
+        });
+
+        if (showSplit) {
+          const switchPick = switchTarget(game.pick, game.opened);
+          let stayWins = null, switchWins = null;
+          if (phase === "REVEALED") {
+            ({ stayWins, switchWins } = outcome(game.car, game.pick, game.opened));
+          }
+          stayDoors.forEach((btn, idx) => {
+            const isOpen = phase === "REVEALED" || idx === game.opened;
+            const isPick = idx === game.pick;
+            const result = phase === "REVEALED" && isPick ? (stayWins ? "win" : "lose") : null;
+            setDoorState(btn, idx, isOpen, isPick, result);
+            btn.disabled = true;
+          });
+          switchDoors.forEach((btn, idx) => {
+            const isOpen = phase === "REVEALED" || idx === game.opened;
+            const isPick = idx === switchPick;
+            const result = phase === "REVEALED" && isPick ? (switchWins ? "win" : "lose") : null;
+            setDoorState(btn, idx, isOpen, isPick, result);
+            btn.disabled = true;
+          });
+        }
+
+        if (phase === "SPLIT") {
+          actionButton.hidden = false;
+          actionButton.disabled = false;
+          actionButton.textContent = "Reveal the car";
+        } else if (phase === "REVEALED") {
+          actionButton.hidden = false;
+          actionButton.disabled = false;
+          actionButton.textContent = "Next round";
+        } else {
+          actionButton.hidden = true;
+        }
+
+        renderTally();
+      }
+
+      function renderTally() {
+        const t = game.tally;
+        cells.stayWins.textContent = t.stay;
+        cells.stayRounds.textContent = t.rounds;
+        cells.switchWins.textContent = t.switch;
+        cells.switchRounds.textContent = t.rounds;
+        cells.stayRate.textContent = t.rounds === 0 ? "—" : Math.round((t.stay / t.rounds) * 100) + "%";
+        cells.switchRate.textContent = t.rounds === 0 ? "—" : Math.round((t.switch / t.rounds) * 100) + "%";
+        roundsLine.textContent = t.rounds >= 10
+          ? "Rounds played: " + t.rounds + " (target 10 reached — keep going if you like)"
+          : "Rounds played: " + t.rounds + " of 10";
+
+        historyStrip.innerHTML = "";
+        for (const outcomeChip of game.history) {
+          const chip = document.createElement("span");
+          chip.className = "chip " + outcomeChip;
+          chip.textContent = outcomeChip;
+          historyStrip.appendChild(chip);
+        }
+      }
+
+      function startRound() {
+        clearTimers();
+        const r = newRound(Math.random);
+        game.phase = "PICK";
+        game.car = r.car;
+        game.pick = null;
+        game.opened = null;
+        render();
+      }
+
+      function pickDoor(idx) {
+        if (game.phase !== "PICK") return;
+        game.pick = idx;
+        render();
+        timerA = setTimeout(() => {
+          game.opened = hostOpens(game.car, game.pick, Math.random);
+          game.phase = "HOST_OPENED";
+          render();
+          timerB = setTimeout(() => {
+            game.phase = "SPLIT";
+            render();
+          }, 700);
+        }, 600);
+      }
+
+      function revealCar() {
+        if (game.phase !== "SPLIT") return;
+        const { stayWins, switchWins } = outcome(game.car, game.pick, game.opened);
+        game.phase = "REVEALED";
+        game.tally.rounds += 1;
+        if (stayWins) game.tally.stay += 1;
+        if (switchWins) game.tally.switch += 1;
+        game.history.push(stayWins ? "S" : "W");
+        render();
+      }
+
+      function nextRound() {
+        startRound();
+      }
+
+      function resetGame() {
+        clearTimers();
+        game.tally = { stay: 0, switch: 0, rounds: 0 };
+        game.history = [];
+        startRound();
+      }
+
+      function simulateAuto(n) {
+        clearTimers();
+        for (let i = 0; i < n; i++) {
+          const r = newRound(Math.random);
+          const pick = Math.floor(Math.random() * 3);
+          const opened = hostOpens(r.car, pick, Math.random);
+          const { stayWins, switchWins } = outcome(r.car, pick, opened);
+          game.tally.rounds += 1;
+          if (stayWins) game.tally.stay += 1;
+          if (switchWins) game.tally.switch += 1;
+          game.history.push(stayWins ? "S" : "W");
+        }
+        startRound();
+      }
+
+      actionButton.addEventListener("click", () => {
+        if (game.phase === "SPLIT") revealCar();
+        else if (game.phase === "REVEALED") nextRound();
+      });
+      resetButton.addEventListener("click", resetGame);
+      autoButton.addEventListener("click", () => simulateAuto(100));
+
+      startRound();
+
+      window.MontyHall = {
+        newRound,
+        hostOpens,
+        switchTarget,
+        outcome,
+        getState() {
+          return {
+            phase: game.phase,
+            round: currentRound(),
+            car: game.car,
+            pick: game.pick,
+            opened: game.opened,
+            tally: { stay: game.tally.stay, switch: game.tally.switch, rounds: game.tally.rounds },
+          };
+        },
+      };
+    })();
+  </script>
+</body>
+</html>
