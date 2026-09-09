@@ -5,6 +5,7 @@ Small, self-contained interactive demos for statistics teaching. Hosted with Git
 | Demo | Folder | What it shows |
 |---|---|---|
 | Estimating π by Monte Carlo | [`estimate-pi/`](estimate-pi/) | Sample uniform points in the unit square; the fraction inside the quarter circle estimates π/4. Companion handout: [`estimate-pi.qmd`](estimate-pi/estimate-pi.qmd) ([PDF](estimate-pi/estimate-pi.pdf)). |
+| The Monty Hall problem | [`monte_hall/`](monte_hall/) | Pick a door, the host opens a goat; stay and switch are then played side by side and tallied over repeated rounds. Companion handout: [`monte-hall.qmd`](monte_hall/monte-hall.qmd) ([PDF](monte_hall/monte-hall.pdf)). |
 
 ## Adding a demo
 

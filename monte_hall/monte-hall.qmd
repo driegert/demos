@@ -1,0 +1,99 @@
+---
+title: "The Monty Hall problem"
+format:
+  pdf:
+    documentclass: article
+    papersize: letter
+    geometry:
+      - margin=0.8in
+    fontsize: 11pt
+    number-sections: false
+    colorlinks: true
+    linkcolor: black
+    urlcolor: black
+    citecolor: black
+    header-includes:
+      - \usepackage{tikz}
+---
+\vspace{-2.2cm}
+## The setup
+
+You are on a game show. In front of you are three closed doors. Behind one of them is a car; behind each of the other two is a goat. You want the car.
+
+\begin{center}
+\begin{tikzpicture}[x=1cm, y=1cm]
+  \foreach \i/\lbl in {0/1, 1/2, 2/3} {
+    \draw[line width=1.2pt, rounded corners=2pt] (2.3*\i, 0) rectangle ++(1.8, 2.0);
+    \fill (2.3*\i + 1.52, 1.0) circle (0.06);
+    \node[font=\Large\bfseries] at (2.3*\i + 0.9, 1.35) {\lbl};
+  }
+  \node[below, font=\small] at (0.9, -0.05) {your pick};
+\end{tikzpicture}
+\end{center}
+
+The game always runs the same way:
+
+1. You pick a door. It stays closed.
+2. The host, who knows exactly where the car is, opens one of the *other* two doors and shows you a goat. He never opens your door and never opens the car.
+3. The host asks: do you want to **stay** with your door, or **switch** to the other closed door?
+
+## What we're trying to do
+
+Two doors are left closed. Is it better to stay, better to switch, or does it not matter?
+
+**Before you play,** write down your gut answer and one sentence of reasoning. Nobody will mark it; it is something to compare against later.
+
+\noindent\rule{\textwidth}{0.4pt}
+\vspace{0.55cm}
+\noindent\rule{\textwidth}{0.4pt}
+
+Think about:
+
+1. When you first pick a door, what is the chance it hides the car?
+2. The host then opens a goat door. Did that move the car? Did it change the chance that *your* door hides the car?
+3. Whatever chance is left over has to sit somewhere. Where?
+4. A prediction: if you play 30 rounds, roughly how many times should *stay* win, and how many times should *switch* win?
+
+Then open the applet at <https://driegert.github.io/demos/monte_hall/> and play at least ten rounds. Every round it shows staying and switching side by side. Record the totals, compare them with your prediction, and if they surprise you, try the hints overleaf.
+
+\begin{center}
+\begin{tabular}{|l|c|c|}
+\hline
+ & \textbf{Stay wins} & \textbf{Switch wins} \\ \hline
+\rule[-0.25cm]{0pt}{0.7cm}After 10 rounds & \hspace{2.2cm} & \hspace{2.2cm} \\ \hline
+\rule[-0.25cm]{0pt}{0.7cm}After 100 automatic rounds & & \\ \hline
+\end{tabular}
+\end{center}
+
+{{< pagebreak >}}
+
+## Hints
+
+**Hint 1: play with more doors.** Imagine 10 doors, one car, nine goats. You pick door 4. The host, who knows where the car is, opens eight other doors and shows you eight goats, leaving door 4 and one other door closed. How likely was your first pick to be right? Does the host's tidy-up change that? Now ask what the leftover chance says about the door the host so carefully avoided.
+
+**Hint 2: take the host's point of view.** The host's move is not random. Split the rounds into two kinds:
+
+- Your first pick was a goat. The host has *no choice*: the other goat is the only door he is allowed to open. So what must be behind the door he leaves closed?
+- Your first pick was the car. The host can open either goat door. What is behind the door he leaves closed this time?
+
+In each kind of round, work out whether staying or switching wins. Then ask how often each kind of round happens.
+
+**Hint 3: list every case.** Because the doors are identical, it is enough to imagine you always pick door 1. Fill in the table.
+
+\begin{center}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Car is behind} & \textbf{Host opens} & \textbf{Stay wins?} & \textbf{Switch wins?} \\ \hline
+\rule[-0.25cm]{0pt}{0.7cm}Door 1 & & & \\ \hline
+\rule[-0.25cm]{0pt}{0.7cm}Door 2 & & & \\ \hline
+\rule[-0.25cm]{0pt}{0.7cm}Door 3 & & & \\ \hline
+\end{tabular}
+\end{center}
+
+Each row is equally likely. Count the rows where each strategy wins.
+
+**Hint 4: why the two counts always add up to the number of rounds.** In the applet, every round is a win for exactly one of the two strategies. Explain why using the rule that the host never opens the car.
+
+**Hint 5: ten rounds is a small sample.** If switching wins with some fixed probability $p$ on every round, the number of switch wins in $n$ rounds is a count of successes in $n$ independent trials. You may know a formula for its standard deviation. Work out how much the win rate can wobble in 10 rounds, and in 100. That is why the applet's 100-round button exists.
+
+**Something to chew on.** Suppose the host did *not* know where the car was, opened one of the other doors at random, and it just happened to show a goat. Is switching still a good idea? Hint 2 is the place to start: which kind of round can no longer be distinguished from the other?

@@ -104,6 +104,18 @@
       min-height: unset;
     }
     .door:hover:not(:disabled) { border-color: var(--accent); }
+    .door:disabled { opacity: 1; cursor: default; }
+    .door-tag {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      z-index: 1;
+      display: none;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .door.open .door-tag { display: block; }
     .door-panel {
       position: absolute;
       inset: 0;
@@ -170,6 +182,16 @@
     .column { flex: 1; min-width: 250px; max-width: 400px; }
     .column .doors-row { margin-top: 8px; }
 
+    /* Entering the split view: the Stay column starts where the single row was and slides left,
+       a translucent copy slides right and solidifies into the Switch column. */
+    /* --stay-dx etc. are measured in JS so both columns start exactly on top of the single row. */
+    @keyframes slide-stay { from { transform: translate(var(--stay-dx, 0px), var(--stay-dy, 0px)); } to { transform: none; } }
+    @keyframes slide-switch { from { transform: translate(var(--switch-dx, 0px), var(--switch-dy, 0px)); opacity: 0.2; } to { transform: none; opacity: 1; } }
+    @keyframes pop { from { transform: scale(0.3); opacity: 0; } to { transform: none; opacity: 1; } }
+    .split-row.entering .column.stay { animation: slide-stay 0.4s ease-out both; }
+    .split-row.entering .column.switch { animation: slide-switch 0.4s ease-out both; }
+    .column.switch .door.picked .pick-badge { animation: pop 0.25s ease-out both; }
+
     .action-row { display: flex; justify-content: center; margin-top: 22px; }
 
     table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
@@ -193,6 +215,7 @@
     }
     .chip.S { background: var(--accent); }
     .chip.W { background: var(--win-bg); }
+    .chip-key { color: var(--muted); font-size: 0.85rem; margin: 0 0 12px; }
 
     ul.notice { margin: 0; padding-left: 22px; }
     ul.notice li { margin-bottom: 8px; }
@@ -201,6 +224,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       .door-panel { transition: none; }
+      .split-row.entering .column, .column.switch .door.picked .pick-badge { animation: none; }
     }
     @media (max-width: 640px) {
       .split-row { flex-direction: column; align-items: center; }
@@ -212,6 +236,9 @@
       .door { width: 92px; height: 128px; }
       .door-number { font-size: 1.5rem; }
       .door-reveal { font-size: 2.1rem; }
+      .status { min-height: calc(2 * 1.5em + 20px); } /* two lines, so the split view doesn't jump when the message wraps */
+      .pick-badge { font-size: 0.6rem; padding: 2px 5px; left: 5px; }
+      .door-tag { right: 6px; top: 7px; }
     }
   </style>
 </head>
@@ -228,11 +255,11 @@
       <div class="doors-row" id="singleDoors"></div>
 
       <div class="split-row" id="splitRow" hidden>
-        <div class="column">
+        <div class="column stay">
           <h3>Stay</h3>
           <div class="doors-row" id="stayDoors"></div>
         </div>
-        <div class="column">
+        <div class="column switch">
           <h3>Switch</h3>
           <div class="doors-row" id="switchDoors"></div>
         </div>
@@ -256,6 +283,7 @@
       </table>
       <p class="rounds-line" id="roundsLine">Rounds played: 0 of 10</p>
       <div class="history-strip" id="historyStrip" aria-hidden="true"></div>
+      <p class="chip-key" id="chipKey" hidden>Per round: <span class="chip S">S</span> stay won, <span class="chip W">W</span> switch won.</p>
       <div class="button-row">
         <button id="resetButton">Reset</button>
         <button id="autoButton">Play 100 rounds automatically</button>
@@ -263,11 +291,12 @@
     </section>
 
     <section class="card" aria-label="What to notice">
-      <h2>What to notice</h2>
+      <h2>Things to think about</h2>
       <ul class="notice">
-        <li><strong>Stay</strong> wins exactly when your first pick was the car — probability 1/3.</li>
-        <li><strong>Switch</strong> wins exactly when your first pick was a goat — probability 2/3.</li>
-        <li>The two win counts always add up to the number of rounds played, because the host never opens the car.</li>
+        <li>Before the host does anything, how likely is it that your first pick is the car? Does the host opening a door move the car?</li>
+        <li>The host knows where the car is and never opens it. Think about the rounds where your first pick was a goat: which door is the host forced to leave closed?</li>
+        <li>Each round, <strong>Stay</strong> and <strong>Switch</strong> can't both win and can't both lose. Why not? What does that say about the two win counts after many rounds?</li>
+        <li>Ten rounds is a small sample. Try the 100-round button a few times and see how much the win rates wobble.</li>
       </ul>
     </section>
   </main>
@@ -327,13 +356,21 @@
         opened: null,
         tally: { stay: 0, switch: 0, rounds: 0 },
         history: [],
+        switchMoved: false, // in SPLIT: has the pick marker hopped to the other door in the Switch column yet?
       };
-      let timerA = null, timerB = null;
+      const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let timerA = null, timerB = null, lockTimer = null, timerC = null;
+      let generation = 0; // bumped whenever a round starts/resets so stale timeouts are ignored
+      let actionLocked = false; // brief lockout so a double-click on "Reveal" cannot also trigger "Next round"
 
       function clearTimers() {
         if (timerA) clearTimeout(timerA);
         if (timerB) clearTimeout(timerB);
-        timerA = timerB = null;
+        if (lockTimer) clearTimeout(lockTimer);
+        if (timerC) clearTimeout(timerC);
+        timerA = timerB = lockTimer = timerC = null;
+        actionLocked = false;
+        generation += 1;
       }
 
       function doorContent(idx) {
@@ -346,6 +383,7 @@
         btn.dataset.idx = String(idx);
         btn.innerHTML =
           '<span class="door-reveal" aria-hidden="true"></span>' +
+          '<span class="door-tag" aria-hidden="true">' + (idx + 1) + '</span>' +
           '<span class="door-panel"><span class="door-number">' + (idx + 1) + '</span><span class="door-knob"></span></span>' +
           '<span class="pick-badge" hidden>Your pick</span>' +
           '<span class="result-badge" hidden></span>';
@@ -391,7 +429,8 @@
       }
 
       function currentRound() {
-        return game.tally.rounds + 1;
+        // The round is counted in the tally at reveal time, but it is still "this round" until Next round.
+        return game.phase === "REVEALED" ? game.tally.rounds : game.tally.rounds + 1;
       }
 
       function statusText() {
@@ -405,7 +444,7 @@
           case "REVEALED": {
             const { stayWins } = outcome(game.car, game.pick, game.opened);
             const label = stayWins ? "Staying" : "Switching";
-            return label + " won this round. Start round " + (currentRound() + 1) + ".";
+            return label + " won this round. Start round " + (game.tally.rounds + 1) + ".";
           }
           default:
             return "";
@@ -417,13 +456,26 @@
         statusEl.textContent = statusText();
 
         const showSplit = phase === "SPLIT" || phase === "REVEALED";
+        const entering = phase === "SPLIT" && !game.switchMoved;
+        const startEntrance = entering && !splitRowEl.classList.contains("entering");
+        const singleRect = startEntrance ? singleDoors[0].getBoundingClientRect() : null;
         singleDoorsEl.hidden = showSplit;
         splitRowEl.hidden = !showSplit;
+        if (startEntrance) {
+          // Measure where each column's first door lands, and start it from where the single row's first door was.
+          const stayRect = stayDoors[0].getBoundingClientRect();
+          const switchRect = switchDoors[0].getBoundingClientRect();
+          splitRowEl.style.setProperty("--stay-dx", (singleRect.x - stayRect.x) + "px");
+          splitRowEl.style.setProperty("--stay-dy", (singleRect.y - stayRect.y) + "px");
+          splitRowEl.style.setProperty("--switch-dx", (singleRect.x - switchRect.x) + "px");
+          splitRowEl.style.setProperty("--switch-dy", (singleRect.y - switchRect.y) + "px");
+        }
+        splitRowEl.classList.toggle("entering", entering);
 
         singleDoors.forEach((btn, idx) => {
           const isOpen = phase !== "PICK" && idx === game.opened;
           setDoorState(btn, idx, isOpen, idx === game.pick, null);
-          btn.disabled = phase !== "PICK";
+          btn.disabled = phase !== "PICK" || game.pick !== null;
         });
 
         if (showSplit) {
@@ -441,7 +493,8 @@
           });
           switchDoors.forEach((btn, idx) => {
             const isOpen = phase === "REVEALED" || idx === game.opened;
-            const isPick = idx === switchPick;
+            // Until the hop animation fires, the Switch column is still an exact copy of the Stay column.
+            const isPick = idx === (game.switchMoved ? switchPick : game.pick);
             const result = phase === "REVEALED" && isPick ? (switchWins ? "win" : "lose") : null;
             setDoorState(btn, idx, isOpen, isPick, result);
             btn.disabled = true;
@@ -450,11 +503,11 @@
 
         if (phase === "SPLIT") {
           actionButton.hidden = false;
-          actionButton.disabled = false;
+          actionButton.disabled = actionLocked;
           actionButton.textContent = "Reveal the car";
         } else if (phase === "REVEALED") {
           actionButton.hidden = false;
-          actionButton.disabled = false;
+          actionButton.disabled = actionLocked;
           actionButton.textContent = "Next round";
         } else {
           actionButton.hidden = true;
@@ -475,6 +528,7 @@
           ? "Rounds played: " + t.rounds + " (target 10 reached — keep going if you like)"
           : "Rounds played: " + t.rounds + " of 10";
 
+        document.getElementById("chipKey").hidden = game.history.length === 0;
         historyStrip.innerHTML = "";
         for (const outcomeChip of game.history) {
           const chip = document.createElement("span");
@@ -491,32 +545,56 @@
         game.car = r.car;
         game.pick = null;
         game.opened = null;
+        game.switchMoved = false;
         render();
       }
 
       function pickDoor(idx) {
-        if (game.phase !== "PICK") return;
+        if (game.phase !== "PICK" || game.pick !== null) return;
         game.pick = idx;
         render();
+        const gen = generation;
         timerA = setTimeout(() => {
+          if (gen !== generation) return;
           game.opened = hostOpens(game.car, game.pick, Math.random);
           game.phase = "HOST_OPENED";
           render();
           timerB = setTimeout(() => {
+            if (gen !== generation) return;
             game.phase = "SPLIT";
+            game.switchMoved = reducedMotion;
             render();
+            if (!game.switchMoved) {
+              timerC = setTimeout(() => {
+                if (gen !== generation) return;
+                game.switchMoved = true;
+                render();
+              }, 450);
+            }
           }, 700);
         }, 600);
+      }
+
+      function lockAction(ms) {
+        actionLocked = true;
+        const gen = generation;
+        lockTimer = setTimeout(() => {
+          if (gen !== generation) return;
+          actionLocked = false;
+          render();
+        }, ms);
       }
 
       function revealCar() {
         if (game.phase !== "SPLIT") return;
         const { stayWins, switchWins } = outcome(game.car, game.pick, game.opened);
         game.phase = "REVEALED";
+        game.switchMoved = true;
         game.tally.rounds += 1;
         if (stayWins) game.tally.stay += 1;
         if (switchWins) game.tally.switch += 1;
         game.history.push(stayWins ? "S" : "W");
+        lockAction(500);
         render();
       }
 
@@ -547,6 +625,7 @@
       }
 
       actionButton.addEventListener("click", () => {
+        if (actionLocked) return;
         if (game.phase === "SPLIT") revealCar();
         else if (game.phase === "REVEALED") nextRound();
       });
